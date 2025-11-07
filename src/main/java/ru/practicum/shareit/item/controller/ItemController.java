@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 public class ItemController {
-    private final String USER_ID_HEADER = "X-Sharer-User-Id";
+    private static final String USER_ID_HEADER = "X-Sharer-User-Id";
     private final ItemService itemService;
 
     @PostMapping
