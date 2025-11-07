@@ -1,7 +1,9 @@
 package ru.practicum.shareit.request.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.exception.EntityNotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
@@ -14,23 +16,25 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/requests")
 @RequiredArgsConstructor
+@Validated
 public class ItemRequestController {
+    private final String USER_ID_HEADER = "X-Sharer-User-Id";
     private final ItemRequestService itemRequestService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ItemRequestDto createRequest(@RequestBody ItemRequestDto itemRequestDto,
-                                        @RequestHeader("X-Sharer-User-Id") Long requestorId) {
+    public ItemRequestDto createRequest(@Valid @RequestBody ItemRequestDto itemRequestDto,
+                                        @RequestHeader(USER_ID_HEADER) Long requestorId) {
         return itemRequestService.createRequest(itemRequestDto, requestorId);
     }
 
     @GetMapping
-    public List<ItemRequestDto> getRequestsByRequestor(@RequestHeader("X-Sharer-User-Id") Long requestorId) {
+    public List<ItemRequestDto> getRequestsByRequestor(@RequestHeader(USER_ID_HEADER) Long requestorId) {
         return itemRequestService.getRequestsByRequestor(requestorId);
     }
 
     @GetMapping("/all")
-    public List<ItemRequestDto> getAllRequests(@RequestHeader("X-Sharer-User-Id") Long userId,
+    public List<ItemRequestDto> getAllRequests(@RequestHeader(USER_ID_HEADER) Long userId,
                                                @RequestParam(defaultValue = "0") int from,
                                                @RequestParam(defaultValue = "10") int size) {
         return itemRequestService.getAllRequests(userId, from, size);
@@ -38,7 +42,7 @@ public class ItemRequestController {
 
     @GetMapping("/{requestId}")
     public ItemRequestDto getRequestById(@PathVariable Long requestId,
-                                         @RequestHeader("X-Sharer-User-Id") Long userId) {
+                                         @RequestHeader(USER_ID_HEADER) Long userId) {
         return itemRequestService.getRequestById(requestId, userId);
     }
 

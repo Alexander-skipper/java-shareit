@@ -6,6 +6,7 @@ import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingMapper;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
+import ru.practicum.shareit.booking.storage.BookingStorage;
 import ru.practicum.shareit.exception.EntityNotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.service.ItemService;
@@ -14,23 +15,23 @@ import ru.practicum.shareit.user.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
-    private final Map<Long, Booking> bookings = new HashMap<>();
-    private long idCounter = 1;
+    private final BookingStorage bookingStorage;
     private final ItemService itemService;
     private final UserService userService;
 
     @Override
     public BookingDto createBooking(BookingDto bookingDto, Long bookerId) {
-        validateBooking(bookingDto);
         checkUserExists(bookerId);
+
+        if (!bookingDto.getEnd().isAfter(bookingDto.getStart())) {
+            throw new ValidationException("Дата окончания должна быть позже даты начала");
+        }
 
 
         ItemDto itemDto = itemService.getItemById(bookingDto.getItemId(), bookerId);
@@ -47,20 +48,17 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking booking = BookingMapper.toBooking(bookingDto);
-        booking.setId(idCounter++);
         booking.setBookerId(bookerId);
         booking.setStatus(BookingStatus.WAITING);
-        bookings.put(booking.getId(), booking);
+        Booking savedBooking = bookingStorage.save(booking);
 
-        return BookingMapper.toBookingDto(booking);
+        return BookingMapper.toBookingDto(savedBooking);
     }
 
     @Override
     public BookingDto approveBooking(Long bookingId, Long ownerId, boolean approved) {
-        Booking booking = bookings.get(bookingId);
-        if (booking == null) {
-            throw new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено");
-        }
+        Booking booking = bookingStorage.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено"));
 
 
         List<ItemDto> ownerItems = itemService.getItemsByOwner(ownerId);
@@ -76,17 +74,15 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
-        bookings.put(bookingId, booking);
+        Booking updatedBooking = bookingStorage.save(booking);
 
-        return BookingMapper.toBookingDto(booking);
+        return BookingMapper.toBookingDto(updatedBooking);
     }
 
     @Override
     public BookingDto getBookingById(Long bookingId, Long userId) {
-        Booking booking = bookings.get(bookingId);
-        if (booking == null) {
-            throw new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено");
-        }
+        Booking booking = bookingStorage.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено"));
 
 
         List<ItemDto> ownerItems = itemService.getItemsByOwner(userId);
@@ -103,10 +99,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingDto cancelBooking(Long bookingId, Long userId) {
-        Booking booking = bookings.get(bookingId);
-        if (booking == null) {
-            throw new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено");
-        }
+        Booking booking = bookingStorage.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Бронирование с ID " + bookingId + " не найдено"));
 
         if (!booking.getBookerId().equals(userId)) {
             throw new EntityNotFoundException("Только автор бронирования может отменить его");
@@ -117,15 +111,15 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELED);
-        bookings.put(bookingId, booking);
+        Booking updatedBooking = bookingStorage.save(booking);
 
-        return BookingMapper.toBookingDto(booking);
+        return BookingMapper.toBookingDto(updatedBooking);
     }
 
     @Override
     public List<BookingDto> getBookingsByBooker(Long bookerId, String state) {
         checkUserExists(bookerId);
-        List<Booking> userBookings = bookings.values().stream()
+        List<Booking> userBookings = bookingStorage.findByBookerId(bookerId).stream()
                 .filter(booking -> booking.getBookerId().equals(bookerId))
                 .sorted((b1, b2) -> b2.getStart().compareTo(b1.getStart()))
                 .collect(Collectors.toList());
@@ -143,7 +137,7 @@ public class BookingServiceImpl implements BookingService {
                 .map(ItemDto::getId)
                 .collect(Collectors.toList());
 
-        List<Booking> ownerBookings = bookings.values().stream()
+        List<Booking> ownerBookings = bookingStorage.findByItemIdIn(ownerItemIds).stream()
                 .filter(booking -> ownerItemIds.contains(booking.getItemId()))
                 .sorted((b1, b2) -> b2.getStart().compareTo(b1.getStart()))
                 .collect(Collectors.toList());
@@ -202,24 +196,6 @@ public class BookingServiceImpl implements BookingService {
 
             default:
                 throw new ValidationException("Unknown state: " + state);
-        }
-    }
-
-    private void validateBooking(BookingDto bookingDto) {
-        if (bookingDto.getStart() == null) {
-            throw new ValidationException("Дата начала бронирования не может быть пустой");
-        }
-        if (bookingDto.getEnd() == null) {
-            throw new ValidationException("Дата окончания бронирования не может быть пустой");
-        }
-        if (bookingDto.getStart().isAfter(bookingDto.getEnd())) {
-            throw new ValidationException("Дата начала не может быть после даты окончания");
-        }
-        if (bookingDto.getStart().isEqual(bookingDto.getEnd())) {
-            throw new ValidationException("Дата начала и окончания не могут совпадать");
-        }
-        if (bookingDto.getItemId() == null) {
-            throw new ValidationException("ID вещи не может быть пустым");
         }
     }
 

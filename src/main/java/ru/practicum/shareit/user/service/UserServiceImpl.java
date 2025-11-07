@@ -1,41 +1,37 @@
 package ru.practicum.shareit.user.service;
 
-import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.DuplicateEmailException;
 import ru.practicum.shareit.exception.EntityNotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.user.storage.UserStorage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    private final Map<Long, User> users = new HashMap<>();
-    private long idCounter = 1;
+    private final UserStorage userStorage;
+
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        validateUser(userDto);
         checkEmailUniqueness(userDto.getEmail());
 
         User user = UserMapper.toUser(userDto);
-        user.setId(idCounter++);
-        users.put(user.getId(), user);
+        User savedUser = userStorage.save(user);
 
-        return UserMapper.toUserDto(user);
+        return UserMapper.toUserDto(savedUser);
     }
 
     @Override
     public UserDto updateUser(Long userId, UserDto userDto) {
-        User existingUser = users.get(userId);
-        if (existingUser == null) {
-            throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
-        }
+        User existingUser = userStorage.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь с ID " + userId + " не найден"));
 
         if (userDto.getName() != null) {
             existingUser.setName(userDto.getName());
@@ -46,53 +42,36 @@ public class UserServiceImpl implements UserService {
             existingUser.setEmail(userDto.getEmail());
         }
 
-        users.put(userId, existingUser);
-        return UserMapper.toUserDto(existingUser);
+        User updatedUser = userStorage.save(existingUser);
+        return UserMapper.toUserDto(updatedUser);
     }
 
     @Override
     public UserDto getUserById(Long userId) {
-        User user = users.get(userId);
-        if (user == null) {
-            throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
-        }
+        User user = userStorage.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь с ID " + userId + " не найден"));
         return UserMapper.toUserDto(user);
     }
 
     @Override
     public List<UserDto> getAllUsers() {
-        List<UserDto> result = new ArrayList<>();
-        for (User user : users.values()) {
-            result.add(UserMapper.toUserDto(user));
-        }
-        return result;
+
+        return userStorage.findAll().stream()
+                .map(UserMapper::toUserDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public void deleteUser(Long userId) {
-        if (!users.containsKey(userId)) {
+        if (!userStorage.findById(userId).isPresent()) {
             throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
         }
-        users.remove(userId);
-    }
-
-    private void validateUser(UserDto userDto) {
-        if (userDto.getEmail() == null || userDto.getEmail().isBlank()) {
-            throw new ValidationException("Email не может быть пустым");
-        }
-        if (!userDto.getEmail().contains("@")) {
-            throw new ValidationException("Некорректный формат email");
-        }
-        if (userDto.getName() == null || userDto.getName().isBlank()) {
-            throw new ValidationException("Имя не может быть пустым");
-        }
+        userStorage.deleteById(userId);
     }
 
     private void checkEmailUniqueness(String email) {
-        for (User user : users.values()) {
-            if (user.getEmail().equals(email)) {
-                throw new DuplicateEmailException("Пользователь с email " + email + " уже существует");
-            }
+        if (userStorage.existsByEmail(email)) {
+            throw new DuplicateEmailException("Пользователь с email " + email + " уже существует");
         }
     }
 }

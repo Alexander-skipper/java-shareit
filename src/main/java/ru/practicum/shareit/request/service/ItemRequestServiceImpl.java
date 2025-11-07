@@ -3,43 +3,38 @@ package ru.practicum.shareit.request.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.EntityNotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.dto.ItemRequestMapper;
+import ru.practicum.shareit.request.storage.ItemRequestStorage;
 import ru.practicum.shareit.user.service.UserService;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ItemRequestServiceImpl implements ItemRequestService {
-    private final Map<Long, ItemRequest> requests = new HashMap<>();
-    private long idCounter = 1;
+    private final ItemRequestStorage itemRequestStorage;
     private final UserService userService;
 
     @Override
     public ItemRequestDto createRequest(ItemRequestDto itemRequestDto, Long requestorId) {
-        validateRequest(itemRequestDto);
         checkUserExists(requestorId);
 
         ItemRequest itemRequest = ItemRequestMapper.toItemRequest(itemRequestDto);
-        itemRequest.setId(idCounter++);
         itemRequest.setRequestorId(requestorId);
         itemRequest.setCreated(LocalDateTime.now());
-        requests.put(itemRequest.getId(), itemRequest);
+        ItemRequest savedRequest = itemRequestStorage.save(itemRequest);
 
-        return ItemRequestMapper.toItemRequestDto(itemRequest);
+        return ItemRequestMapper.toItemRequestDto(savedRequest);
     }
 
     @Override
     public List<ItemRequestDto> getRequestsByRequestor(Long requestorId) {
         checkUserExists(requestorId);
-        return requests.values().stream()
+        return itemRequestStorage.findByRequestorId(requestorId).stream()
                 .filter(request -> request.getRequestorId().equals(requestorId))
                 .sorted((r1, r2) -> r2.getCreated().compareTo(r1.getCreated()))
                 .map(ItemRequestMapper::toItemRequestDto)
@@ -50,11 +45,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     public List<ItemRequestDto> getAllRequests(Long userId, int from, int size) {
         checkUserExists(userId);
 
-        if (from < 0 || size <= 0) {
-            throw new ValidationException("Неверные параметры пагинации");
-        }
-
-        List<ItemRequest> allRequests = requests.values().stream()
+        List<ItemRequest> allRequests = itemRequestStorage.findByRequestorIdNot(userId).stream()
                 .filter(request -> !request.getRequestorId().equals(userId))
                 .sorted((r1, r2) -> r2.getCreated().compareTo(r1.getCreated()))
                 .collect(Collectors.toList());
@@ -71,17 +62,9 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public ItemRequestDto getRequestById(Long requestId, Long userId) {
         checkUserExists(userId);
-        ItemRequest itemRequest = requests.get(requestId);
-        if (itemRequest == null) {
-            throw new EntityNotFoundException("Запрос с ID " + requestId + " не найден");
-        }
+        ItemRequest itemRequest = itemRequestStorage.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Запрос с ID " + requestId + " не найден"));
         return ItemRequestMapper.toItemRequestDto(itemRequest);
-    }
-
-    private void validateRequest(ItemRequestDto itemRequestDto) {
-        if (itemRequestDto.getDescription() == null || itemRequestDto.getDescription().isBlank()) {
-            throw new ValidationException("Описание запроса не может быть пустым");
-        }
     }
 
     private void checkUserExists(Long userId) {
