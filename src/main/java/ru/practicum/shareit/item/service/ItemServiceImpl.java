@@ -7,7 +7,7 @@ import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMapper;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.storage.ItemStorage;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
     private final ItemStorage itemStorage;
-    private final UserService userService;
+    private final UserStorage userStorage;
 
 
     @Override
@@ -79,9 +79,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private void checkUserExists(Long userId) {
-        try {
-            userService.getUserById(userId);
-        } catch (EntityNotFoundException e) {
+        if (!userStorage.existsById(userId)) {
             throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
         }
     }

@@ -50,4 +50,9 @@ public class InMemoryUserStorage implements UserStorage {
                 .filter(user -> user.getEmail().equals(email))
                 .findFirst();
     }
+
+    @Override
+    public boolean existsById(Long id) {
+        return users.containsKey(id);
+    }
 }

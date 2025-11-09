@@ -11,10 +11,11 @@ import ru.practicum.shareit.exception.EntityNotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.service.ItemService;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 public class BookingServiceImpl implements BookingService {
     private final BookingStorage bookingStorage;
     private final ItemService itemService;
-    private final UserService userService;
+    private final UserStorage userStorage;
 
     @Override
     public BookingDto createBooking(BookingDto bookingDto, Long bookerId) {
@@ -147,7 +148,7 @@ public class BookingServiceImpl implements BookingService {
 
     private List<BookingDto> filterBookingsByState(List<Booking> bookings, String state) {
         if (bookings.isEmpty()) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -200,9 +201,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void checkUserExists(Long userId) {
-        try {
-            userService.getUserById(userId);
-        } catch (EntityNotFoundException e) {
+        if (!userStorage.existsById(userId)) {
             throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
         }
     }

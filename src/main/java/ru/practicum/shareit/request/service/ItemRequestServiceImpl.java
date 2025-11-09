@@ -7,7 +7,7 @@ import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.dto.ItemRequestMapper;
 import ru.practicum.shareit.request.storage.ItemRequestStorage;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ItemRequestServiceImpl implements ItemRequestService {
     private final ItemRequestStorage itemRequestStorage;
-    private final UserService userService;
+    private final UserStorage userStorage;
 
     @Override
     public ItemRequestDto createRequest(ItemRequestDto itemRequestDto, Long requestorId) {
@@ -68,9 +68,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     }
 
     private void checkUserExists(Long userId) {
-        try {
-            userService.getUserById(userId);
-        } catch (EntityNotFoundException e) {
+        if (!userStorage.existsById(userId)) {
             throw new EntityNotFoundException("Пользователь с ID " + userId + " не найден");
         }
     }
