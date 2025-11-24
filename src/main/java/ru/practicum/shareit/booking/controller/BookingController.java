@@ -30,7 +30,7 @@ public class BookingController {
 
     @PatchMapping("/{bookingId}")
     public BookingDto approveBooking(@PathVariable @NotNull @Positive Long bookingId,
-                                     @RequestParam boolean approved,
+                                     @RequestParam(name = "approved") boolean approved,
                                      @RequestHeader(USER_ID_HEADER) @NotNull @Positive Long ownerId) {
         return bookingService.approveBooking(bookingId, ownerId, approved);
     }
