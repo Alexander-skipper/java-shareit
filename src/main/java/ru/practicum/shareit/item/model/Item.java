@@ -1,11 +1,14 @@
 package ru.practicum.shareit.item.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import ru.practicum.shareit.comment.model.Comment;
 
-@Data
+import java.util.List;
+
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -29,4 +32,18 @@ public class Item {
 
     @Column(name = "request_id")
     private Long requestId;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "item_id")
+    @ToString.Exclude
+    private List<Comment> comments;
+
+    public Item(Long id, String name, String description, Boolean available, Long ownerId, Long requestId) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.available = available;
+        this.ownerId = ownerId;
+        this.requestId = requestId;
+    }
 }
