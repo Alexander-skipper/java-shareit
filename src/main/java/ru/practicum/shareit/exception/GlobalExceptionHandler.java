@@ -12,19 +12,23 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler
+    @ExceptionHandler(EntityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String handleEntityNotFound(EntityNotFoundException e) {
-        return e.getMessage();
+    public Map<String, String> handleEntityNotFound(EntityNotFoundException e) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", e.getMessage());
+        return response;
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(ValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public String handleValidation(ValidationException e) {
-        return e.getMessage();
+    public Map<String, String> handleValidation(ValidationException e) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", e.getMessage());
+        return response;
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(DuplicateEmailException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, String> handleDuplicateEmail(DuplicateEmailException e) {
         Map<String, String> response = new HashMap<>();
@@ -39,5 +43,21 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
         return errors;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, String> handleAccessDenied(AccessDeniedException e) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", e.getMessage());
+        return response;
+    }
+
+    @ExceptionHandler(InternalServerException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Map<String, String> handleInternalServerError(InternalServerException e) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", e.getMessage());
+        return response;
     }
 }

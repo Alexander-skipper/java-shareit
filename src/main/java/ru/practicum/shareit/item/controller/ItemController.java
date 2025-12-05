@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.comment.dto.CommentDto;
+import ru.practicum.shareit.comment.dto.CommentRequestDto;
+import ru.practicum.shareit.comment.service.CommentService;
 import ru.practicum.shareit.item.service.ItemService;
 import ru.practicum.shareit.item.dto.ItemDto;
 
@@ -20,6 +23,7 @@ import java.util.List;
 public class ItemController {
     private static final String USER_ID_HEADER = "X-Sharer-User-Id";
     private final ItemService itemService;
+    private final CommentService commentService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,5 +54,13 @@ public class ItemController {
     public List<ItemDto> searchItems(@RequestParam String text,
                                      @RequestHeader(USER_ID_HEADER) @NotNull @Positive Long userId) {
         return itemService.searchItems(text, userId);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentDto addComment(@PathVariable @NotNull @Positive Long itemId,
+                                 @Valid @RequestBody CommentRequestDto commentRequestDto,
+                                 @RequestHeader(USER_ID_HEADER) @NotNull @Positive Long authorId) {
+        return commentService.createComment(commentRequestDto, itemId, authorId);
     }
 }

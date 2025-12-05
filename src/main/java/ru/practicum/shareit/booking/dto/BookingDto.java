@@ -32,4 +32,40 @@ public class BookingDto {
 
     private Long bookerId;
     private BookingStatus status;
+
+    private BookerDto booker;
+    private ItemDto item;
+
+    public BookingDto(Long id, LocalDateTime start, LocalDateTime end, Long itemId,
+                      Long bookerId, BookingStatus status) {
+        this.id = id;
+        this.start = start;
+        this.end = end;
+        this.itemId = itemId;
+        this.bookerId = bookerId;
+        this.status = status;
+    }
+
+    public BookingDto(Long id, Long bookerId, LocalDateTime start, LocalDateTime end) {
+        this.id = id;
+        this.bookerId = bookerId;
+        this.start = start;
+        this.end = end;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BookerDto {
+        private Long id;
+        private String name;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ItemDto {
+        private Long id;
+        private String name;
+    }
 }
